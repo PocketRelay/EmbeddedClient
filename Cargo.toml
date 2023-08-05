@@ -1,0 +1,39 @@
+[package]
+name = "pocket-relay-hooks"
+version = "0.1.0"
+edition = "2021"
+description = "DLL that patches portions of ME3 to allow PocketRelay to work"
+repository = "https://github.com/PocketRelay/PocketRelayHooks"
+license = "MIT"
+readme = "README.md"
+authors = ["Jacobtread <jacobtread@gmail.com>"]
+keywords = ["Hooking"]
+build = "build.rs"
+
+[lib]
+name = "binkw32"
+crate-type = ["cdylib"]
+
+[build-dependencies]
+exe = "^0.5.6"
+
+[dependencies]
+
+[dependencies.windows-sys]
+version = "0.48"
+features = [
+    "Win32_Foundation",
+    "Win32_System_SystemServices",
+    "Win32_System_Memory",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Console",
+]
+
+# Compile std to reduce size:
+# cargo +nightly build -Z build-std=std,panic_abort --release --target x86_64-pc-windows-msvc
+# [profile.release]
+# opt-level = "z"
+# codegen-units = 1
+# panic = "abort"
+# strip = true
+# lto = true
