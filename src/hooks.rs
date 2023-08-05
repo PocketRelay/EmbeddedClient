@@ -43,7 +43,12 @@ unsafe fn compare_mask(addr: *const u8, op_mask: &[u8], str_mask: &str) -> bool 
 /// * end - The address to end searching at
 /// * op_mask - The opcodes to match against
 /// * str_mask - The str pattern defining how to match the opcodes
-unsafe fn find_pattern(start: u64, end: u64, op_mask: &[u8], str_mask: &str) -> Option<*const u8> {
+unsafe fn find_pattern(
+    start: isize,
+    end: isize,
+    op_mask: &[u8],
+    str_mask: &str,
+) -> Option<*const u8> {
     (start..=end)
         .map(|addr| addr as *const u8)
         .find(|addr| compare_mask(*addr, op_mask, str_mask))
@@ -56,8 +61,8 @@ pub unsafe fn hook() {
 }
 
 unsafe fn hook_dlc() {
-    let start_addr: u64 = 0x401000;
-    let end_addr: u64 = 0xE52000;
+    let start_addr: isize = 0x401000;
+    let end_addr: isize = 0xE52000;
 
     // Find the pattern for VerifyCertificate
     let call_addr = find_pattern(start_addr, end_addr, DLC_OP_MASK, DLC_STR_MASK);
@@ -105,8 +110,8 @@ unsafe fn hook_dlc() {
 }
 
 unsafe fn hook_console() {
-    let start_addr: u64 = 0x401000;
-    let end_addr: u64 = 0xE52000;
+    let start_addr: isize = 0x401000;
+    let end_addr: isize = 0xE52000;
 
     // Find the pattern for VerifyCertificate
     let call_addr = find_pattern(start_addr, end_addr, CONSOLE_OP_MASK, CONSOLE_STR_MASK);
@@ -162,8 +167,8 @@ unsafe fn hook_console() {
 }
 
 unsafe fn hook_cert_check() {
-    let start_addr: u64 = 0x401000;
-    let end_addr: u64 = 0xE52000;
+    let start_addr: isize = 0x401000;
+    let end_addr: isize = 0xE52000;
 
     let call_addr = find_pattern(
         start_addr,

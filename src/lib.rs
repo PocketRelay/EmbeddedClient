@@ -18,14 +18,14 @@ unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut (
             // Allocate a console
             AllocConsole();
 
-            // Load ASI plugins
-            plugin::load();
-
             // initialize the proxy
             proxy::init();
 
             // Handles the DLL being attached to the game
             unsafe { hooks::hook() };
+
+            // Load ASI plugins
+            plugin::load();
         }
         DLL_PROCESS_DETACH => {
             // free the proxied library
