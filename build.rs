@@ -113,7 +113,7 @@ fn write_asm_x86(exports: &[&str]) {
     exports.iter().enumerate().for_each(|(index, key)| {
         writeln!(&mut out, "{}:", key).unwrap();
 
-        writeln!(&mut out, "    jmp ds:[ADDR_TABLE + {} * 4]", index).unwrap();
+        writeln!(&mut out, "    jmp ds:[_ADDR_TABLE + {} * 4]", index).unwrap();
     });
 }
 
