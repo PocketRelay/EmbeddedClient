@@ -20,6 +20,27 @@ const CONSOLE_OP_MASK: &[u8] = &[
 const CERT_CHECK_STR_MASK: &str = "xxxxxxxx";
 const CERT_CHECK_OP_MASK: &[u8] = &[0xB8, 0xE4, 0xFF, 0xFF, 0xFF, 0x5B, 0x59, 0xC3];
 
+const HOSTNAME_LOOKUP_STR_MASK: &str = "x????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const HOSTNAME_LOOKUP_OP_MASK: &[u8; 53] = &[
+    0xE8, 0x8B, 0x9F, 0xF8, 0xFF, // call <JMP.&gethostbyname>
+    0x85, 0xC0, // test eax,eax
+    0x74, 0x2E, // je me3c.F652E7
+    0x8B, 0x48, 0x0C, // mov ecx,dword ptr ds:[eax+C]
+    0x8B, 0x01, // mov eax,dword ptr ds:[ecx]
+    0x0F, 0xB6, 0x10, // movzx edx,byte ptr ds:[eax]
+    0x0F, 0xB6, 0x48, 0x01, // movzx ecx,byte ptr ds:[eax+1]
+    0xC1, 0xE2, 0x08, // shl edx,8
+    0x0B, 0xD1, // or edx,ecx
+    0x0F, 0xB6, 0x48, 0x02, // movzx ecx,byte ptr ds:[eax+2]
+    0x0F, 0xB6, 0x40, 0x03, // movzx eax,byte ptr ds:[eax+3]
+    0xC1, 0xE2, 0x08, // shl edx,8
+    0x0B, 0xD1, // or edx,ecx
+    0xC1, 0xE2, 0x08, // shl edx,8
+    0x0B, 0xD0, // or edx,eax (REPLACE THIS WITH mov    eax,0x7f000000)
+    0x89, 0x56, 0x04, // mov dword ptr ds:[esi+4],edx
+    0xC7, 0x06, 0x01, 0x00, 0x00, 0x00, // mov dword ptr ds:[esi],1
+];
+
 /// Compares the opcodes after the provided address using the provided
 /// opcode and pattern
 ///
@@ -55,9 +76,65 @@ unsafe fn find_pattern(
 }
 
 pub unsafe fn hook() {
-    hook_dlc();
-    hook_console();
+    // hook_dlc();
+
+    // hook_console();
+    hook_host_lookup();
     hook_cert_check();
+}
+
+unsafe fn hook_host_lookup() {
+    let start_addr: isize = 0x401000;
+    let end_addr: isize = 0xFFFFFF;
+
+    // Find the pattern for VerifyCertificate
+    let call_addr = find_pattern(
+        start_addr,
+        end_addr,
+        HOSTNAME_LOOKUP_OP_MASK,
+        HOSTNAME_LOOKUP_STR_MASK,
+    );
+
+    let call_addr = match call_addr {
+        Some(value) => value,
+        None => {
+            println!("Failed to find patch position 1 (HOST)");
+            return;
+        }
+    };
+
+    let call_addr = call_addr.add(39);
+
+    println!(
+        "Found patch position 1 (HOST) @ {:#016x}",
+        call_addr as usize
+    );
+
+    let mut old_protect: PAGE_PROTECTION_FLAGS = 0;
+    // Protect the memory region
+    if VirtualProtect(
+        call_addr as *const c_void,
+        5,
+        PAGE_READWRITE,
+        &mut old_protect,
+    ) == FALSE
+    {
+        println!("Failed to protect memory region while hooking patch position 1 (DLC)");
+        return;
+    }
+
+    // Replacement opcodes
+    let new_ops: [u8; 5] = [0xba, 0x00, 0x00, 0x00, 0x7f];
+
+    // Iterate the opcodes and write them to the ptr
+    let mut op_ptr: *mut u8 = call_addr as *mut u8;
+    for op in new_ops {
+        *op_ptr = op;
+        op_ptr = op_ptr.add(1);
+    }
+
+    // Unprotect the memory region
+    VirtualProtect(call_addr as *const c_void, 5, old_protect, &mut old_protect);
 }
 
 unsafe fn hook_dlc() {
@@ -168,7 +245,7 @@ unsafe fn hook_console() {
 
 unsafe fn hook_cert_check() {
     let start_addr: isize = 0x401000;
-    let end_addr: isize = 0xE52000;
+    let end_addr: isize = 0xFFFFFF;
 
     let call_addr = find_pattern(
         start_addr,
@@ -186,7 +263,7 @@ unsafe fn hook_cert_check() {
     };
 
     println!(
-        "Found patch position 3 (Console) @ {:#016x}",
+        "Found patch position 3 (Cert Check) @ {:#016x}",
         call_addr as usize
     );
 

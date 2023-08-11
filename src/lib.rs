@@ -41,3 +41,12 @@ unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut (
 
     true
 }
+
+#[test]
+fn test() {
+    // 2130706433
+    // 7f000001
+
+    let be = [b'x'; 53];
+    println!("{}", std::str::from_utf8(&be).unwrap());
+}
