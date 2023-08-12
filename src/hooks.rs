@@ -76,9 +76,8 @@ unsafe fn find_pattern(
 }
 
 pub unsafe fn hook() {
-    // hook_dlc();
-
-    // hook_console();
+    hook_dlc();
+    hook_console();
     hook_host_lookup();
     hook_cert_check();
 }
@@ -139,7 +138,7 @@ unsafe fn hook_host_lookup() {
 
 unsafe fn hook_dlc() {
     let start_addr: isize = 0x401000;
-    let end_addr: isize = 0xE52000;
+    let end_addr: isize = 0xFFFFFF;
 
     // Find the pattern for VerifyCertificate
     let call_addr = find_pattern(start_addr, end_addr, DLC_OP_MASK, DLC_STR_MASK);
@@ -188,7 +187,7 @@ unsafe fn hook_dlc() {
 
 unsafe fn hook_console() {
     let start_addr: isize = 0x401000;
-    let end_addr: isize = 0xE52000;
+    let end_addr: isize = 0xFFFFFF;
 
     // Find the pattern for VerifyCertificate
     let call_addr = find_pattern(start_addr, end_addr, CONSOLE_OP_MASK, CONSOLE_STR_MASK);
