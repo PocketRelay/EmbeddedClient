@@ -7,6 +7,7 @@ use windows_sys::Win32::System::{
 };
 
 pub mod hooks;
+pub mod pattern;
 pub mod plugin;
 pub mod proxy;
 

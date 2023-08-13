@@ -27,7 +27,11 @@ features = [
     "Win32_System_Memory",
     "Win32_System_LibraryLoader",
     "Win32_System_Console",
+    "Win32_Networking_WinSock"
 ]
+# Compile x86
+# cargo build --release --target i686-pc-windows-msvc
+
 
 # Compile std to reduce size:
 # cargo +nightly build -Z build-std=std,panic_abort --release --target x86_64-pc-windows-msvc
