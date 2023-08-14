@@ -24,6 +24,8 @@ unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut (
     match call_reason {
         DLL_PROCESS_ATTACH => {
             std::thread::spawn(|| {
+                // TODO: Only start servers if the player sets a connection url
+
                 // Create tokio async runtime
                 let runtime = tokio::runtime::Builder::new_multi_thread()
                     .enable_all()

@@ -93,10 +93,12 @@ pub fn init(runtime: tokio::runtime::Runtime) {
                     let result = runtime.block_on(try_update_host(target));
 
                     match result {
-                        Ok(value) => c_label.set_text(&format!(
-                            "Connected: {} {} version v{}",
-                            value.scheme, value.host, value.version
-                        )),
+                        Ok(value) => {
+                            c_label.set_text(&format!(
+                                "Connected: {} {} version v{}",
+                                value.scheme, value.host, value.version
+                            ));
+                        }
                         Err(err) => {
                             c_label.set_text("Failed to connect");
                             ngw::modal_error_message(
