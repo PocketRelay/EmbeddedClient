@@ -69,8 +69,8 @@ const HOSTNAME_LOOKUP_PATTERN: Pattern = Pattern {
 };
 
 pub unsafe fn hook() {
-    // hook_dlc();
-    // hook_console();
+    hook_dlc();
+    hook_console();
     hook_host_lookup();
     hook_cert_check();
 }
@@ -166,15 +166,10 @@ unsafe fn hook_dlc() {
 }
 
 unsafe fn hook_console() {
-    Pattern::apply_with_transform(
-        &CONSOLE_PATTERN,
-        22,
-        |addr| addr.add(5),
-        |addr| {
-            fill_bytes(addr, &[0; 4]);
-            fill_bytes(addr.add(18), &[0; 4]);
-        },
-    );
+    Pattern::apply(&CONSOLE_PATTERN, 22, |addr| {
+        fill_bytes(addr.add(5), &[0; 4]);
+        fill_bytes(addr.add(18), &[0; 4]);
+    });
 }
 
 unsafe fn hook_cert_check() {
