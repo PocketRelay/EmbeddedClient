@@ -8,7 +8,10 @@ use windows_sys::{
     Win32::Networking::WinSock::{gethostbyname, HOSTENT},
 };
 
-use crate::pattern::{fill_bytes, Pattern};
+use crate::{
+    pattern::{fill_bytes, Pattern},
+    TARGET,
+};
 
 const DLC_PATTERN: Pattern = Pattern {
     name: "DLC",
@@ -82,9 +85,12 @@ pub unsafe extern "system" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
 
     debug!("Got Host Lookup Request {}", str_name.to_string_lossy());
 
+    // Don't redirect to local when custom server is not set
+    let is_official = TARGET.blocking_read().is_none();
+
     // We are only targetting gosredirecotr for host redirects
     // forward null responses aswell
-    if str_name.to_bytes() != b"gosredirector.ea.com" {
+    if str_name.to_bytes() != b"gosredirector.ea.com" || is_official {
         // Obtain the actual host lookup result
         return gethostbyname(name);
     }
