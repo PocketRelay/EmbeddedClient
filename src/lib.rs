@@ -19,6 +19,10 @@ unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut (
             // Allocate a console
             AllocConsole();
 
+            env_logger::builder()
+                .filter_level(log::LevelFilter::Debug)
+                .init();
+
             // initialize the proxy
             proxy::init();
 

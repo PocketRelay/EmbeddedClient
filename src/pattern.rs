@@ -1,3 +1,4 @@
+use log::{debug, error};
 use std::ffi::c_void;
 use windows_sys::Win32::{
     Foundation::{GetLastError, FALSE},
@@ -30,11 +31,11 @@ impl Pattern {
         F: FnOnce(*mut u8),
     {
         let Some(addr) = self.find() else {
-            eprintln!("Failed to find {} hook position", self.name);
+            error!("Failed to find {} hook position", self.name);
             return;
         };
 
-        println!("Found {} @ {:#016x}", self.name, addr as usize);
+        debug!("Found {} @ {:#016x}", self.name, addr as usize);
 
         Self::use_memory(addr, length, action)
     }
@@ -53,11 +54,11 @@ impl Pattern {
         F: FnOnce(*mut P),
     {
         let Some(addr) = self.find() else {
-            eprintln!("Failed to find {} hook position", self.name);
+            error!("Failed to find {} hook position", self.name);
             return;
         };
 
-        println!("Found {} @ {:#016x}", self.name, addr as usize);
+        debug!("Found {} @ {:#016x}", self.name, addr as usize);
 
         // Transform the address
         let addr = transform(addr);
@@ -109,7 +110,7 @@ impl Pattern {
         {
             let error = GetLastError();
 
-            eprintln!(
+            error!(
                 "Failed to protect memory region @ {:#016x} length {} error: {:#4x}",
                 addr as usize, length, error
             );

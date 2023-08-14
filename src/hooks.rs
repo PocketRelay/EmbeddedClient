@@ -1,4 +1,8 @@
-use std::ffi::{c_void, CStr, CString};
+use log::debug;
+use std::{
+    ffi::{c_void, CStr, CString},
+    io::Write,
+};
 use windows_sys::{
     core::PCSTR,
     Win32::{
@@ -62,7 +66,7 @@ const HOSTNAME_LOOKUP_PATTERN: Pattern = Pattern {
         0xC1, 0xE2, 0x08, // shl edx,8
         0x0B, 0xD1, // or edx,ecx
         0xC1, 0xE2, 0x08, // shl edx,8
-        0x0B, 0xD0, // or edx,eax (REPLACE THIS WITH mov    eax,0x7f000000)
+        0x0B, 0xD0, // or edx,eax
         0x89, 0x56, 0x04, // mov dword ptr ds:[esi+4],edx
         0xC7, 0x06, 0x01, 0x00, 0x00, 0x00, // mov dword ptr ds:[esi],1
     ],
@@ -75,11 +79,18 @@ pub unsafe fn hook() {
     // hook_cert_check();
 }
 
+static mut ACTUAL_GETHOSTBYNAME: *const fn(PCSTR) -> *mut HOSTENT = std::ptr::null();
+
 #[no_mangle]
-pub unsafe extern "C" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
+pub unsafe extern "system" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
     let str = CStr::from_ptr(name.cast());
-    println!("Got Host Lookup Request {}", str.to_string_lossy());
-    gethostbyname(name)
+    debug!("Got Host Lookup Request {}", str.to_string_lossy());
+    std::io::stdout().flush().unwrap();
+
+    let result = gethostbyname(name);
+    debug!("Got Host Lookup Response {:?}", result);
+
+    std::ptr::null_mut()
 }
 
 unsafe fn hook_host_lookup() {
@@ -96,19 +107,31 @@ unsafe fn hook_host_lookup() {
             // Relative jump -> EEF240 (jump to jmp in thunk table)
             let jmp_address = addr.add(5 /* Skip call opcode + address */ + distance);
 
-            println!("Address of jump @ {:#016x}", jmp_address as usize);
+            debug!("Address of jump @ {:#016x}", jmp_address as usize);
 
             // == Address to the final ptr
             // jmp dword ptr ds:[????]
             let address = *(jmp_address.add(2 /* Skip ptr jmp opcode */) as *const usize);
 
-            println!("Address of dst @ {:#016x}", address);
+            debug!("Address of dst @ {:#016x}", address);
+
+            // Invalid call at -> 019A4DF1
 
             address as *const u8
         },
         |addr| {
+            // Replace the address with out faker function
             let ptr: *mut usize = addr as *mut usize;
+
+            let last_address = *ptr;
+            debug!("Previous address @ {:#016x}", last_address);
+
+            // Store the actual function
+            ACTUAL_GETHOSTBYNAME = last_address as *const fn(PCSTR) -> *mut HOSTENT;
+
             *ptr = fake_gethostbyname as usize;
+
+            debug!("New address @ {:#016x}", fake_gethostbyname as usize);
         },
     );
 }

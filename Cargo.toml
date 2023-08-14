@@ -18,6 +18,8 @@ crate-type = ["cdylib"]
 exe = "^0.5.6"
 
 [dependencies]
+env_logger = "0.10.0"
+log = "0.4.20"
 
 [dependencies.windows-sys]
 version = "0.48"
