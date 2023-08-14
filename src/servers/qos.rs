@@ -35,7 +35,7 @@ pub async fn start_server() {
             None => continue,
         };
 
-        debug!("Recieved QOS message");
+        debug!("QOS message ->");
 
         let port = addr.port().to_be_bytes();
         let address = address.octets();

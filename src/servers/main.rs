@@ -1,5 +1,5 @@
 use crate::{constants::MAIN_PORT, show_error, spawn_task, LookupData};
-use log::debug;
+use log::{debug, error};
 use reqwest::{
     header::{self, HeaderMap, HeaderValue},
     Client,
@@ -27,7 +27,10 @@ pub async fn start_server(target: Arc<LookupData>) {
     loop {
         let (stream, _) = match listener.accept().await {
             Ok(value) => value,
-            Err(_) => break,
+            Err(err) => {
+                error!("Failed to accept main connection: {}", err);
+                break;
+            }
         };
 
         debug!("Main connection ->");
@@ -80,13 +83,19 @@ async fn handle_blaze(mut client: TcpStream, target: Arc<LookupData>) {
     // Await the server response to the request
     let response = match request.await {
         Ok(value) => value,
-        Err(_) => return,
+        Err(err) => {
+            error!("Failed to get server pipe response: {}", err);
+            return;
+        }
     };
 
     // Server connection gained through upgrading the client
     let mut server = match response.upgrade().await {
         Ok(value) => value,
-        Err(_) => return,
+        Err(err) => {
+            error!("Failed to upgrade connection pipe: {}", err);
+            return;
+        }
     };
 
     // Copy the data between the connection

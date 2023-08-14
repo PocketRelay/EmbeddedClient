@@ -34,7 +34,10 @@ pub async fn start_server() {
         // Accept a new connection
         let accept = match listener.accept().await {
             Ok(value) => value,
-            Err(_) => break,
+            Err(err) => {
+                error!("Failed to accept redirector connection: {}", err);
+                break;
+            }
         };
 
         debug!("Redirector connection ->");

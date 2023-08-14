@@ -1,4 +1,4 @@
-use log::{debug, error};
+use log::{debug, error, warn};
 use std::ffi::c_void;
 use windows_sys::Win32::{
     Foundation::{GetLastError, FALSE},
@@ -31,7 +31,7 @@ impl Pattern {
         F: FnOnce(*mut u8),
     {
         let Some(addr) = self.find() else {
-            error!("Failed to find {} hook position", self.name);
+            warn!("Failed to find {} hook position", self.name);
             return;
         };
 
@@ -54,7 +54,7 @@ impl Pattern {
         F: FnOnce(*mut P),
     {
         let Some(addr) = self.find() else {
-            error!("Failed to find {} hook position", self.name);
+            warn!("Failed to find {} hook position", self.name);
             return;
         };
 

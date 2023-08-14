@@ -2,6 +2,7 @@ use crate::{
     constants::{APP_VERSION, ICON_BYTES},
     stop_servers, try_start_servers, SERVERS_TASK,
 };
+use log::{debug, error};
 use ngw::{GridLayoutItem, Icon};
 
 extern crate native_windows_gui as ngw;
@@ -86,14 +87,16 @@ pub fn init(runtime: tokio::runtime::Runtime) {
 
             E::OnButtonClick => {
                 if handle == set_button {
-                    c_label.set_text("Connecting...");
-
                     if SERVERS_TASK.blocking_read().is_some() {
+                        c_label.set_text("Disconnecting...");
+
                         runtime.block_on(stop_servers());
 
                         c_label.set_text("Not connected");
                         set_button.set_text("Connect")
                     } else {
+                        c_label.set_text("Connecting...");
+
                         let target = target_url.text();
                         let value = match runtime.block_on(try_start_servers(target)) {
                             Ok(value) => value,
@@ -104,9 +107,16 @@ pub fn init(runtime: tokio::runtime::Runtime) {
                                     "Failed to connect",
                                     &err.to_string(),
                                 );
+                                error!("Failed to connect: {}", err);
                                 return;
                             }
                         };
+
+                        debug!(
+                            "Connected to server {} {} version v{}",
+                            value.scheme, value.host, value.version
+                        );
+
                         let message = format!(
                             "Connected: {} {} version v{}",
                             value.scheme, value.host, value.version
