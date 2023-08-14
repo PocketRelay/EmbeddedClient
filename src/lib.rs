@@ -53,19 +53,6 @@ pub async fn cancel_tasks() {
 unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut ()) -> bool {
     match call_reason {
         DLL_PROCESS_ATTACH => {
-            std::thread::spawn(|| {
-                *TASK_SET.blocking_write() = Some(JoinSet::new());
-
-                // Create tokio async runtime
-                let runtime = tokio::runtime::Builder::new_multi_thread()
-                    .enable_all()
-                    .build()
-                    .expect("Failed building the Runtime");
-
-                // Initialize the UI
-                interface::init(runtime);
-            });
-
             // Allocate a console
             AllocConsole();
 
@@ -81,6 +68,20 @@ unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut (
 
             // Load ASI plugins
             plugin::load();
+
+            // Spawn UI and prepare task set
+            std::thread::spawn(|| {
+                *TASK_SET.blocking_write() = Some(JoinSet::new());
+
+                // Create tokio async runtime
+                let runtime = tokio::runtime::Builder::new_multi_thread()
+                    .enable_all()
+                    .build()
+                    .expect("Failed building the Runtime");
+
+                // Initialize the UI
+                interface::init(runtime);
+            });
         }
         DLL_PROCESS_DETACH => {
             // free the proxied library
