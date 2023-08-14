@@ -1,3 +1,4 @@
+use log::{error, info};
 use std::{
     fs::read_dir,
     path::{Path, PathBuf},
@@ -15,7 +16,7 @@ pub fn load() {
     let files = match read_dir(path) {
         Ok(value) => value,
         Err(err) => {
-            eprintln!("Failed to read ASI directory: {}", err);
+            error!("Failed to read ASI directory: {}", err);
             return;
         }
     };
@@ -46,15 +47,15 @@ fn load_plugin(path: PathBuf, name: &str) {
     let mut file_path = path.to_string_lossy().to_string();
     file_path.push('\0');
 
-    println!("Loading plugin: {}", name);
+    info!("Loading plugin: {}", name);
 
     let handle = unsafe { LoadLibraryA(file_path.as_ptr()) };
 
     if handle == 0 {
         let err = unsafe { GetLastError() };
-        eprintln!("Failed to load plugin: {} {}", name, err);
+        error!("Failed to load plugin: {} {}", name, err);
         return;
     }
 
-    println!("Loaded plugin: {}", name);
+    info!("Loaded plugin: {}", name);
 }
