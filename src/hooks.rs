@@ -69,14 +69,14 @@ const HOSTNAME_LOOKUP_PATTERN: Pattern = Pattern {
 };
 
 pub unsafe fn hook() {
-    hook_dlc();
-    hook_console();
+    // hook_dlc();
+    // hook_console();
     hook_host_lookup();
-    hook_cert_check();
+    // hook_cert_check();
 }
 
 #[no_mangle]
-pub unsafe fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
+pub unsafe extern "C" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
     let str = CStr::from_ptr(name.cast());
     println!("Got Host Lookup Request {}", str.to_string_lossy());
     gethostbyname(name)
@@ -87,14 +87,28 @@ unsafe fn hook_host_lookup() {
         &HOSTNAME_LOOKUP_PATTERN,
         4,
         |addr| {
-            let call_addr: *const isize = addr.add(1).cast();
-            let relative_addr = *call_addr;
-            addr.add((5 /* opcode + address */ + relative_addr) as usize)
+            // Initial -> f652b0
+
+            // == Obtain the address from the call ????
+            // call ???? (Obtain the relative call distance)
+            let distance = *(addr.add(1 /* Skip call opcode */) as *const usize);
+
+            // Relative jump -> EEF240 (jump to jmp in thunk table)
+            let jmp_address = addr.add(5 /* Skip call opcode + address */ + distance);
+
+            println!("Address of jump @ {:#016x}", jmp_address as usize);
+
+            // == Address to the final ptr
+            // jmp dword ptr ds:[????]
+            let address = *(jmp_address.add(2 /* Skip ptr jmp opcode */) as *const usize);
+
+            println!("Address of dst @ {:#016x}", address);
+
+            address as *const u8
         },
-        |addr, start_address| {
-            let start_address = start_address as usize;
+        |addr| {
             let ptr: *mut usize = addr as *mut usize;
-            *ptr = (fake_gethostbyname as usize) - (start_address + 5);
+            *ptr = fake_gethostbyname as usize;
         },
     );
 }
@@ -104,7 +118,7 @@ unsafe fn hook_dlc() {
         &DLC_PATTERN,
         2,
         |addr| addr.add(9),
-        |addr, _| {
+        |addr| {
             fill_bytes(addr, &[0xB0, 0x01]);
         },
     );
@@ -115,7 +129,7 @@ unsafe fn hook_console() {
         &CONSOLE_PATTERN,
         22,
         |addr| addr.add(5),
-        |addr, _| {
+        |addr| {
             fill_bytes(addr, &[0; 4]);
             fill_bytes(addr.add(18), &[0; 4]);
         },

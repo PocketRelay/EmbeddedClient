@@ -50,7 +50,7 @@ impl Pattern {
     pub unsafe fn apply_with_transform<F, T, P>(&self, length: usize, transform: T, action: F)
     where
         T: FnOnce(*const u8) -> *const P,
-        F: FnOnce(*mut P, *const u8),
+        F: FnOnce(*mut P),
     {
         let Some(addr) = self.find() else {
             eprintln!("Failed to find {} hook position", self.name);
@@ -59,10 +59,9 @@ impl Pattern {
 
         println!("Found {} @ {:#016x}", self.name, addr as usize);
 
-        let old_addr = addr;
         // Transform the address
         let addr = transform(addr);
-        Self::use_memory(addr, length, |addr| action(addr, old_addr))
+        Self::use_memory(addr, length, action)
     }
 
     /// Attempts to find a matching pattern anywhere between the start and
