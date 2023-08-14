@@ -12,3 +12,6 @@ pub const MAIN_PORT: u16 = 42128;
 pub const TELEMETRY_PORT: u16 = 42129;
 /// The local quality of service server port
 pub const QOS_PORT: u16 = 42130;
+
+/// Server identifier
+pub const SERVER_IDENT: &str = "POCKET_RELAY_SERVER";

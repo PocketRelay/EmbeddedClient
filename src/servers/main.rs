@@ -1,4 +1,5 @@
 use crate::{constants::MAIN_PORT, show_error, spawn_task, LookupData};
+use log::debug;
 use reqwest::{
     header::{self, HeaderMap, HeaderValue},
     Client,
@@ -28,6 +29,8 @@ pub async fn start_server(target: Arc<LookupData>) {
             Ok(value) => value,
             Err(_) => break,
         };
+
+        debug!("Main connection ->");
 
         // Spawn off a new handler for the connection
         spawn_task(handle_blaze(stream, target.clone())).await;
@@ -68,6 +71,8 @@ async fn handle_blaze(mut client: TcpStream, target: Arc<LookupData>) {
     if let Ok(host_value) = HeaderValue::from_str(&target.host) {
         headers.insert(HEADER_HOST, host_value);
     }
+
+    debug!("Connecting pipe to Pocket Relay server");
 
     // Create the request
     let request = Client::new().get(url).headers(headers).send();

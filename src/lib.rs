@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use constants::SERVER_IDENT;
 use futures_util::Future;
 use log::{debug, error};
 use native_dialog::MessageDialog;
@@ -128,6 +129,9 @@ pub fn show_error(title: &str, text: &str) {
 struct ServerDetails {
     /// The Pocket Relay version of the server
     version: String,
+    /// Server identifier checked to ensure its a proper server
+    #[serde(default)]
+    ident: Option<String>,
 }
 
 /// Data from completing a lookup contains the resolved address
@@ -157,6 +161,8 @@ enum LookupError {
     /// The server gave an invalid response likely not a PR server
     #[error("Invalid server response")]
     InvalidResponse(reqwest::Error),
+    #[error("Server identifier was incorrect (Not a PocketRelay server?)")]
+    NotPocketRelay,
 }
 
 /// Attempts to connect to the provided target server, if the connection
@@ -223,6 +229,11 @@ async fn try_lookup_host(host: String) -> Result<LookupData, LookupError> {
         .json::<ServerDetails>()
         .await
         .map_err(LookupError::InvalidResponse)?;
+
+    // Handle invalid server ident
+    if details.ident.is_none() || details.ident.is_some_and(|value| value != SERVER_IDENT) {
+        return Err(LookupError::NotPocketRelay);
+    }
 
     Ok(LookupData {
         scheme,

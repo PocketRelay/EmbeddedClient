@@ -1,4 +1,5 @@
 use crate::{constants::QOS_PORT, show_error};
+use log::debug;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     process::exit,
@@ -33,6 +34,8 @@ pub async fn start_server() {
             Some(value) => value,
             None => continue,
         };
+
+        debug!("Recieved QOS message");
 
         let port = addr.port().to_be_bytes();
         let address = address.octets();

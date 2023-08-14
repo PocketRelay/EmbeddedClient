@@ -10,6 +10,7 @@ use blaze_pk::{
 };
 use blaze_ssl_async::{BlazeAccept, BlazeListener};
 use futures_util::{SinkExt, StreamExt};
+use log::{debug, error};
 use std::{io, net::Ipv4Addr, process::exit, time::Duration};
 use tokio::{select, time::sleep};
 use tokio_util::codec::Framed;
@@ -35,6 +36,8 @@ pub async fn start_server() {
             Ok(value) => value,
             Err(_) => break,
         };
+
+        debug!("Redirector connection ->");
 
         // Spawn a handler for the listener
         spawn_task(async move {
@@ -73,7 +76,10 @@ async fn handle_client(accept: BlazeAccept) -> io::Result<()> {
     // Complete the SSLv3 handshaking process
     let (stream, _) = match accept.finish_accept().await {
         Ok(value) => value,
-        Err(_) => return Ok(()),
+        Err(err) => {
+            error!("Failed to accept redirector connection: {}", err);
+            return Ok(());
+        }
     };
 
     // Create a packet reader
@@ -99,6 +105,8 @@ async fn handle_client(accept: BlazeAccept) -> io::Result<()> {
             framed.send(packet.respond_empty()).await?;
             continue;
         }
+
+        debug!("Recieved instance request packet");
 
         // Response with the instance details
         let response = packet.respond(LocalInstance {});

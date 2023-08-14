@@ -1,4 +1,5 @@
 use crate::{constants::TELEMETRY_PORT, show_error, spawn_task, LookupData};
+use log::debug;
 use reqwest::Client;
 use serde::Serialize;
 use std::{io, net::Ipv4Addr, process::exit, sync::Arc};
@@ -42,6 +43,8 @@ pub async fn start_server(target: Arc<LookupData>) {
 
             let mut stream = stream;
             while let Ok(message) = read_message(&mut stream).await {
+                debug!("Recieved telemetry message");
+
                 let message: TelemetryMessage = decode_message(message);
                 // TODO: Batch these telemetry messages and send them to the server
                 let _ = client.post(&url).json(&message).send().await;
