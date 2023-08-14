@@ -1,17 +1,11 @@
 use log::debug;
 use std::{
-    alloc::{alloc, GlobalAlloc, Layout},
-    ffi::{c_void, CStr, CString},
-    io::Write,
-    net::Ipv4Addr,
+    alloc::{alloc, Layout},
+    ffi::{CStr, CString},
 };
 use windows_sys::{
     core::PCSTR,
-    Win32::{
-        Foundation::FALSE,
-        Networking::WinSock::{gethostbyname, AF_INET, HOSTENT},
-        System::Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS, PAGE_READWRITE},
-    },
+    Win32::Networking::WinSock::{gethostbyname, HOSTENT},
 };
 
 use crate::pattern::{fill_bytes, Pattern};
@@ -96,36 +90,38 @@ pub unsafe extern "system" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
     }
 
     debug!("Responding with localhost redirect");
-
-    // Respond with the fake result
-    create_local_host()
-}
-
-/// Creates a localhost resolved HOSTENT for the client
-/// to use
-unsafe fn create_local_host() -> *mut HOSTENT {
-    let host = "gosredirector.ea.com\0";
-    let raw_host = host.to_string().as_mut_ptr();
+    let host = CString::new("gosredirector.ea.com").unwrap();
 
     // Empty aliases
-    let aliases: *mut *mut i8 = [std::ptr::null_mut()].as_mut_ptr();
+    let aliases_layout = Layout::array::<*mut i8>(1).unwrap();
+    let aliases: *mut *mut i8 = alloc(aliases_layout) as *mut *mut i8;
+    *aliases = std::ptr::null_mut();
 
     // Create the target address
-    let mut address: Vec<i8> = Vec::with_capacity(21);
-    address.extend_from_slice(&[127, 0, 0, 1]);
-    address.extend(host.chars().map(|value| value as i8));
+    let mut address: Vec<i8> = [127, 0, 0, 1]
+        .iter()
+        .chain(host.as_bytes_with_nul())
+        .map(|value| *value as i8)
+        .collect();
 
-    let address_list: *mut *mut i8 = [address.as_mut_ptr(), std::ptr::null_mut()].as_mut_ptr();
+    // Addresses
+    let addresses_layout = Layout::array::<*mut i8>(2).unwrap();
+    let addresses: *mut *mut i8 = alloc(addresses_layout) as *mut *mut i8;
+    *addresses = address.as_mut_ptr();
+    *(addresses.add(1)) = std::ptr::null_mut();
 
-    let mut result = HOSTENT {
+    let raw_host = host.into_raw().cast();
+
+    // Respond with the fake result
+    let result = Box::new(HOSTENT {
         h_name: raw_host,
         h_aliases: aliases,
-        h_addrtype: AF_INET as i16, /* IPv4 addresses */
-        h_length: 4,                /* 4 bytes for IPv4 */
-        h_addr_list: address_list,
-    };
+        h_addrtype: 2, /* IPv4 addresses */
+        h_length: 4,   /* 4 bytes for IPv4 */
+        h_addr_list: addresses,
+    });
 
-    std::ptr::addr_of_mut!(result)
+    Box::into_raw(result)
 }
 
 unsafe fn hook_host_lookup() {
