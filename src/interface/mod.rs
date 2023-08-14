@@ -9,7 +9,7 @@ extern crate native_windows_gui as ngw;
 
 pub const WINDOW_SIZE: (i32, i32) = (500, 150);
 
-pub fn init(runtime: tokio::runtime::Runtime) {
+pub fn init(runtime: tokio::runtime::Handle) {
     ngw::init().expect("Failed to initialize native UI");
     ngw::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 

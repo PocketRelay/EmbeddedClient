@@ -78,9 +78,14 @@ unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut (
                     .enable_all()
                     .build()
                     .expect("Failed building the Runtime");
+                let handle = runtime.handle().clone();
 
                 // Initialize the UI
-                interface::init(runtime);
+                interface::init(handle);
+
+                // Block for CTRL+C to keep servers alive when window closes
+                let shutdown_signal = tokio::signal::ctrl_c();
+                let _ = runtime.block_on(shutdown_signal);
             });
         }
         DLL_PROCESS_DETACH => {

@@ -50,7 +50,7 @@ features = [
 # Tokio async runtime
 [dependencies.tokio]
 version = "1"
-features = ["macros", "net", "parking_lot", "rt-multi-thread", "sync"]
+features = ["macros", "net", "parking_lot", "rt-multi-thread", "sync", "signal"]
 
 
 
