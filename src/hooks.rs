@@ -9,7 +9,7 @@ use windows_sys::{
     core::PCSTR,
     Win32::{
         Foundation::FALSE,
-        Networking::WinSock::{gethostbyname, HOSTENT},
+        Networking::WinSock::{gethostbyname, AF_INET, HOSTENT},
         System::Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS, PAGE_READWRITE},
     },
 };
@@ -83,104 +83,49 @@ pub unsafe fn hook() {
 
 #[no_mangle]
 pub unsafe extern "system" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
+    // Resolve the name
     let str_name = CStr::from_ptr(name.cast());
-    debug!("Got Host Lookup Request {}", str_name.to_string_lossy());
 
-    let result = gethostbyname(name);
+    debug!("Got Host Lookup Request {}", str_name.to_string_lossy());
 
     // We are only targetting gosredirecotr for host redirects
     // forward null responses aswell
-    if str_name.to_bytes() != b"gosredirector.ea.com" || result.is_null() {
-        return result;
+    if str_name.to_bytes() != b"gosredirector.ea.com" {
+        // Obtain the actual host lookup result
+        return gethostbyname(name);
     }
 
-    debug!("Faking redirect target");
+    debug!("Responding with localhost redirect");
 
-    let host = CString::new("gosredirector.ea.com")
-        .unwrap()
-        .into_raw()
-        .cast();
+    // Respond with the fake result
+    create_local_host()
+}
 
-    // Allocate aliases list with single null ptr
-    let aliases_layout = Layout::array::<*mut i8>(1).unwrap();
-    let h_aliases = alloc(aliases_layout) as *mut *mut i8;
-    *h_aliases = std::ptr::null_mut();
+/// Creates a localhost resolved HOSTENT for the client
+/// to use
+unsafe fn create_local_host() -> *mut HOSTENT {
+    let host = "gosredirector.ea.com\0";
+    let raw_host = host.to_string().as_mut_ptr();
 
-    // Allocate aliases list with single null ptr
-    let addr_list_layout = Layout::array::<*mut i8>(2).unwrap();
-    let h_addr_list = alloc(addr_list_layout) as *mut *mut i8;
-    *h_addr_list = std::ptr::null_mut();
+    // Empty aliases
+    let aliases: *mut *mut i8 = [std::ptr::null_mut()].as_mut_ptr();
 
+    // Create the target address
     let mut address: Vec<i8> = Vec::with_capacity(21);
     address.extend_from_slice(&[127, 0, 0, 1]);
-    address.extend("gosredirector.ea.com\0".chars().map(|value| value as i8));
+    address.extend(host.chars().map(|value| value as i8));
 
-    *h_addr_list = address.as_mut_ptr();
-    *(h_addr_list.add(1)) = std::ptr::null_mut();
+    let address_list: *mut *mut i8 = [address.as_mut_ptr(), std::ptr::null_mut()].as_mut_ptr();
 
-    let mut fake_result = HOSTENT {
-        h_name: host,
-        h_aliases,
-        h_addrtype: 2,
-        h_length: 4,
-        h_addr_list,
+    let mut result = HOSTENT {
+        h_name: raw_host,
+        h_aliases: aliases,
+        h_addrtype: AF_INET as i16, /* IPv4 addresses */
+        h_length: 4,                /* 4 bytes for IPv4 */
+        h_addr_list: address_list,
     };
 
-    debug_host_ent(*result);
-
-    std::ptr::addr_of_mut!(fake_result)
-}
-
-unsafe fn debug_host_ent(result: HOSTENT) {
-    let h_name = CStr::from_ptr(result.h_name.cast());
-    debug!("Name: {}", h_name.to_string_lossy());
-    debug!("Aliases: ");
-    let mut alias = result.h_aliases;
-
-    loop {
-        let value = *alias;
-        if value.is_null() {
-            break;
-        }
-
-        let value = CString::from_raw(value);
-        debug!("- {}", value.to_string_lossy());
-
-        alias = alias.add(1);
-    }
-
-    debug!("Type: {}", result.h_addrtype);
-    debug!("Length: {}", result.h_length);
-
-    debug!("Addresses:");
-    let mut addr = result.h_addr_list;
-    loop {
-        let mut value = *addr;
-        if value.is_null() {
-            break;
-        }
-
-        let mut bytes = [0u8; 4];
-
-        for byte in bytes.iter_mut() {
-            *byte = *value as u8;
-            value = value.add(1);
-        }
-
-        let ip = Ipv4Addr::from(bytes);
-
-        let value = CString::from_raw(value);
-
-        debug!("- {} {}", ip, value.to_string_lossy());
-
-        addr = addr.add(1);
-    }
-}
-
-#[test]
-fn test() {
-    let value = 0x3bfc57f0u32.to_be_bytes();
-    println!("{:?}", value);
+    std::ptr::addr_of_mut!(result)
 }
 
 unsafe fn hook_host_lookup() {
@@ -212,13 +157,7 @@ unsafe fn hook_host_lookup() {
         |addr| {
             // Replace the address with out faker function
             let ptr: *mut usize = addr as *mut usize;
-
-            let last_address = *ptr;
-            debug!("Previous address @ {:#016x}", last_address);
-
             *ptr = fake_gethostbyname as usize;
-
-            debug!("New address @ {:#016x}", fake_gethostbyname as usize);
         },
     );
 }
