@@ -1,6 +1,6 @@
 use crate::{
     constants::{MAIN_PORT, REDIRECTOR_PORT},
-    show_error,
+    show_error, spawn_task,
 };
 use blaze_pk::{
     codec::Encodable,
@@ -37,9 +37,10 @@ pub async fn start_server() {
         };
 
         // Spawn a handler for the listener
-        tokio::spawn(async move {
+        spawn_task(async move {
             let _ = handle_client(accept).await;
-        });
+        })
+        .await;
     }
 }
 

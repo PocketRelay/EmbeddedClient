@@ -1,9 +1,9 @@
-use crate::{constants::MAIN_PORT, show_error, TARGET};
+use crate::{constants::MAIN_PORT, show_error, spawn_task, LookupData};
 use reqwest::{
     header::{self, HeaderMap, HeaderValue},
     Client,
 };
-use std::{net::Ipv4Addr, process::exit};
+use std::{net::Ipv4Addr, process::exit, sync::Arc};
 use tokio::{
     io::copy_bidirectional,
     net::{TcpListener, TcpStream},
@@ -11,7 +11,7 @@ use tokio::{
 
 /// Starts the main server proxy. This creates a connection to the Pocket Relay
 /// which is upgraded and then used as the main connection fro the game.
-pub async fn start_server() {
+pub async fn start_server(target: Arc<LookupData>) {
     // Initializing the underlying TCP listener
     let listener = match TcpListener::bind((Ipv4Addr::UNSPECIFIED, MAIN_PORT)).await {
         Ok(value) => value,
@@ -30,7 +30,7 @@ pub async fn start_server() {
         };
 
         // Spawn off a new handler for the connection
-        tokio::spawn(handle_blaze(stream));
+        spawn_task(handle_blaze(stream, target.clone())).await;
     }
 }
 
@@ -43,12 +43,7 @@ const HEADER_HOST: &str = "X-Pocket-Relay-Host";
 /// Endpoint for upgrading the server connection
 const UPGRADE_ENDPOINT: &str = "/api/server/upgrade";
 
-async fn handle_blaze(mut client: TcpStream) {
-    let target = match &*TARGET.read().await {
-        Some(value) => value.clone(),
-        None => return,
-    };
-
+async fn handle_blaze(mut client: TcpStream, target: Arc<LookupData>) {
     // Create the upgrade URL
     let mut url = String::new();
     url.push_str(&target.scheme);

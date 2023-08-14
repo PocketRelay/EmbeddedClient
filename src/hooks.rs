@@ -10,7 +10,7 @@ use windows_sys::{
 
 use crate::{
     pattern::{fill_bytes, Pattern},
-    TARGET,
+    SERVERS_TASK,
 };
 
 const DLC_PATTERN: Pattern = Pattern {
@@ -86,7 +86,7 @@ pub unsafe extern "system" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
     debug!("Got Host Lookup Request {}", str_name.to_string_lossy());
 
     // Don't redirect to local when custom server is not set
-    let is_official = TARGET.blocking_read().is_none();
+    let is_official = SERVERS_TASK.blocking_read().is_none();
 
     // We are only targetting gosredirecotr for host redirects
     // forward null responses aswell

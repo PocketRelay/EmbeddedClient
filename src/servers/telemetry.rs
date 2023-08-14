@@ -1,7 +1,7 @@
-use crate::{constants::TELEMETRY_PORT, show_error, TARGET};
+use crate::{constants::TELEMETRY_PORT, show_error, spawn_task, LookupData};
 use reqwest::Client;
 use serde::Serialize;
-use std::{io, net::Ipv4Addr, process::exit};
+use std::{io, net::Ipv4Addr, process::exit, sync::Arc};
 use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
@@ -10,7 +10,7 @@ use tokio::{
 /// Server API endpoint to send telemetry data to
 const TELEMETRY_ENDPOINT: &str = "/api/server/telemetry";
 
-pub async fn start_server() {
+pub async fn start_server(target: Arc<LookupData>) {
     // Initializing the underlying TCP listener
     let listener = match TcpListener::bind((Ipv4Addr::UNSPECIFIED, TELEMETRY_PORT)).await {
         Ok(value) => value,
@@ -28,12 +28,9 @@ pub async fn start_server() {
             Err(_) => continue,
         };
 
-        tokio::spawn(async move {
-            let target = match &*TARGET.read().await {
-                Some(value) => value.clone(),
-                None => return,
-            };
+        let target = target.clone();
 
+        spawn_task(async move {
             // Create the telemetry URL
             let mut url = String::new();
             url.push_str(&target.scheme);
@@ -49,7 +46,8 @@ pub async fn start_server() {
                 // TODO: Batch these telemetry messages and send them to the server
                 let _ = client.post(&url).json(&message).send().await;
             }
-        });
+        })
+        .await;
     }
 }
 

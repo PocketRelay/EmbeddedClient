@@ -1,9 +1,16 @@
 #![allow(clippy::missing_safety_doc)]
 
+use std::sync::Arc;
+
+use futures_util::Future;
+use log::{debug, error};
 use native_dialog::MessageDialog;
 use serde::Deserialize;
 use thiserror::Error;
-use tokio::sync::RwLock;
+use tokio::{
+    sync::RwLock,
+    task::{JoinHandle, JoinSet},
+};
 use windows_sys::Win32::System::{
     Console::{AllocConsole, FreeConsole},
     LibraryLoader::FreeLibrary,
@@ -18,22 +25,41 @@ pub mod plugin;
 pub mod proxy;
 pub mod servers;
 
+static SERVERS_TASK: RwLock<Option<JoinHandle<()>>> = RwLock::const_new(None);
+static TASK_SET: RwLock<Option<JoinSet<()>>> = RwLock::const_new(None);
+
+pub async fn spawn_task<F>(task: F)
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    let mut set = TASK_SET.write().await;
+    if let Some(value) = &mut *set {
+        value.spawn(task);
+    } else {
+        error!("Failed to spawn task, task set not initialized")
+    }
+}
+
+pub async fn cancel_tasks() {
+    let mut set = TASK_SET.write().await;
+    if let Some(value) = &mut *set {
+        value.abort_all();
+    }
+}
+
 #[no_mangle]
 #[allow(non_snake_case, unused_variables)]
 unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut ()) -> bool {
     match call_reason {
         DLL_PROCESS_ATTACH => {
             std::thread::spawn(|| {
-                // TODO: Only start servers if the player sets a connection url
+                *TASK_SET.blocking_write() = Some(JoinSet::new());
 
                 // Create tokio async runtime
                 let runtime = tokio::runtime::Builder::new_multi_thread()
                     .enable_all()
                     .build()
                     .expect("Failed building the Runtime");
-
-                // Start the servers
-                runtime.spawn(servers::start());
 
                 // Initialize the UI
                 interface::init(runtime);
@@ -96,9 +122,6 @@ pub fn show_error(title: &str, text: &str) {
         .unwrap()
 }
 
-/// Shared target location
-pub static TARGET: RwLock<Option<LookupData>> = RwLock::const_new(None);
-
 /// Details provided by the server. These are the only fields
 /// that we need the rest are ignored by this client.
 #[derive(Deserialize)]
@@ -136,16 +159,28 @@ enum LookupError {
     InvalidResponse(reqwest::Error),
 }
 
-/// Attempts to update the host target first looks up the
-/// target then will assign the stored global target to the
-/// target before returning the result
+/// Attempts to connect to the provided target server, if the connection
+/// succeeds then the local server will start
 ///
 /// `target` The target to use
-async fn try_update_host(target: String) -> Result<LookupData, LookupError> {
+async fn try_start_servers(target: String) -> Result<Arc<LookupData>, LookupError> {
     let result = try_lookup_host(target).await?;
-    let mut write = TARGET.write().await;
-    *write = Some(result.clone());
+    let result = Arc::new(result);
+    // Start the servers
+    let handle = tokio::spawn(servers::start(result.clone()));
+
+    let write = &mut *SERVERS_TASK.write().await;
+    *write = Some(handle);
+
     Ok(result)
+}
+
+async fn stop_servers() {
+    if let Some(handle) = SERVERS_TASK.write().await.take() {
+        debug!("Stopping servers");
+        handle.abort();
+    }
+    cancel_tasks().await;
 }
 
 /// Attempts to connect to the Pocket Relay HTTP server at the provided

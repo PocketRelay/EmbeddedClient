@@ -1,6 +1,6 @@
 use crate::{
     constants::{APP_VERSION, ICON_BYTES},
-    try_update_host,
+    stop_servers, try_start_servers, SERVERS_TASK,
 };
 use ngw::{GridLayoutItem, Icon};
 
@@ -57,7 +57,7 @@ pub fn init(runtime: tokio::runtime::Runtime) {
         .build(&mut target_url)
         .unwrap();
     ngw::Button::builder()
-        .text("Set")
+        .text("Connect")
         .parent(&window)
         .build(&mut set_button)
         .unwrap();
@@ -86,27 +86,34 @@ pub fn init(runtime: tokio::runtime::Runtime) {
 
             E::OnButtonClick => {
                 if handle == set_button {
-                    c_label.set_text("Loading...");
+                    c_label.set_text("Connecting...");
 
-                    let target = target_url.text();
+                    if SERVERS_TASK.blocking_read().is_some() {
+                        runtime.block_on(stop_servers());
 
-                    let result = runtime.block_on(try_update_host(target));
+                        c_label.set_text("Not connected");
+                        set_button.set_text("Connect")
+                    } else {
+                        let target = target_url.text();
+                        let value = match runtime.block_on(try_start_servers(target)) {
+                            Ok(value) => value,
+                            Err(err) => {
+                                c_label.set_text("Failed to connect");
+                                ngw::modal_error_message(
+                                    window_handle,
+                                    "Failed to connect",
+                                    &err.to_string(),
+                                );
+                                return;
+                            }
+                        };
+                        let message = format!(
+                            "Connected: {} {} version v{}",
+                            value.scheme, value.host, value.version
+                        );
 
-                    match result {
-                        Ok(value) => {
-                            c_label.set_text(&format!(
-                                "Connected: {} {} version v{}",
-                                value.scheme, value.host, value.version
-                            ));
-                        }
-                        Err(err) => {
-                            c_label.set_text("Failed to connect");
-                            ngw::modal_error_message(
-                                window_handle,
-                                "Failed to connect",
-                                &err.to_string(),
-                            );
-                        }
+                        c_label.set_text(&message);
+                        set_button.set_text("Disconnect")
                     }
                 }
             }
