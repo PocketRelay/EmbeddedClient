@@ -809,9 +809,8 @@ checksum = "57bcfdad1b858c2db7c38303a6d2ad4dfaf5eb53dfeb0910128b2c26d6158503"
 
 [[package]]
 name = "local-ip-address"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "885efb07efcd6ae1c6af70be7565544121424fa9e5b1c3e4b58bbbf141a58cef"
+version = "0.5.2"
+source = "git+https://github.com/jacobtread/local-ip-address.git#8be57e884721f8201ca04195472e5f6f3129fb5f"
 dependencies = [
  "libc",
  "neli",
@@ -2158,8 +2157,3 @@ name = "zeroize"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a0956f1ba7c7909bfb66c2e9e4124ab6f6482560f6628b5aaeba39207c9aad9"
-
-[[patch.unused]]
-name = "local-ip-address"
-version = "0.5.2"
-source = "git+https://github.com/jacobtread/local-ip-address.git#8be57e884721f8201ca04195472e5f6f3129fb5f"

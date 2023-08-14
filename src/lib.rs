@@ -12,7 +12,7 @@ use windows_sys::Win32::System::{
 
 pub mod constants;
 pub mod hooks;
-pub mod native;
+pub mod interface;
 pub mod pattern;
 pub mod plugin;
 pub mod proxy;
@@ -36,7 +36,7 @@ unsafe extern "system" fn DllMain(dll_module: usize, call_reason: u32, _: *mut (
                 runtime.spawn(servers::start());
 
                 // Initialize the UI
-                native::init(runtime);
+                interface::init(runtime);
             });
 
             // Allocate a console

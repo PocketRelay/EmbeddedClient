@@ -26,7 +26,7 @@ fn main() {
     write_exports(&exports);
     write_proxy(&exports);
 
-    let lib_path = Path::new("src/Exports.def");
+    let lib_path = Path::new("src/proxy/Exports.def");
     let absolute_path = std::fs::canonicalize(lib_path).unwrap();
     println!(
         "cargo:rustc-cdylib-link-arg=/DEF:{}",
@@ -35,7 +35,7 @@ fn main() {
 }
 
 fn write_proxy(exports: &[&str]) {
-    let mut out = File::create("src/proxy.rs").expect("Failed to create src/proxy.rs");
+    let mut out = File::create("src/proxy/mod.rs").expect("Failed to create src/proxy/mod.rs");
 
     let export_len = exports.len();
     let export_list = exports
@@ -82,7 +82,8 @@ pub unsafe fn init() {{
 }
 
 fn write_asm_x64(exports: &[&str]) {
-    let mut out = File::create("src/binkw.x64.S").expect("Failed to create src/binkw.x64.S");
+    let mut out =
+        File::create("src/proxy/binkw.x64.S").expect("Failed to create src/proxy/binkw.x64.S");
 
     exports.iter().for_each(|key| {
         writeln!(&mut out, ".globl {}", key).unwrap();
@@ -102,7 +103,8 @@ fn write_asm_x64(exports: &[&str]) {
 }
 
 fn write_asm_x86(exports: &[&str]) {
-    let mut out = File::create("src/binkw.x86.S").expect("Failed to create src/binkw.x86.S");
+    let mut out =
+        File::create("src/proxy/binkw.x86.S").expect("Failed to create src/proxy/binkw.x86.S");
 
     exports.iter().for_each(|key| {
         writeln!(&mut out, ".globl {}", key).unwrap();
@@ -118,7 +120,8 @@ fn write_asm_x86(exports: &[&str]) {
 }
 
 fn write_exports(exports: &[&str]) {
-    let mut out = File::create("src/Exports.def").expect("Failed to create src/Exports.def");
+    let mut out =
+        File::create("src/proxy/Exports.def").expect("Failed to create src/proxy/Exports.def");
     writeln!(&mut out, "EXPORTS").unwrap();
 
     exports.iter().for_each(|key| {
