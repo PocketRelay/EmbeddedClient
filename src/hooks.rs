@@ -142,13 +142,9 @@ unsafe fn hook_host_lookup() {
             // Relative jump -> EEF240 (jump to jmp in thunk table)
             let jmp_address = addr.add(5 /* Skip call opcode + address */ + distance);
 
-            debug!("Address of jump @ {:#016x}", jmp_address as usize);
-
             // == Address to the final ptr
             // jmp dword ptr ds:[????]
             let address = *(jmp_address.add(2 /* Skip ptr jmp opcode */) as *const usize);
-
-            debug!("Address of dst @ {:#016x}", address);
 
             // Invalid call at -> 019A4DF1
 
