@@ -1,4 +1,4 @@
-use crate::{constants::TELEMETRY_PORT, show_error, spawn_task, LookupData};
+use crate::{api::LookupData, constants::TELEMETRY_PORT, interface::show_error};
 use log::debug;
 use reqwest::Client;
 use serde::Serialize;
@@ -7,6 +7,8 @@ use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
 };
+
+use super::spawn_task;
 
 /// Server API endpoint to send telemetry data to
 const TELEMETRY_ENDPOINT: &str = "/api/server/telemetry";

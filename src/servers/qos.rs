@@ -1,4 +1,4 @@
-use crate::{constants::QOS_PORT, show_error};
+use crate::{constants::QOS_PORT, interface::show_error};
 use log::debug;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},

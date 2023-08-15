@@ -1,6 +1,7 @@
 use crate::{
     constants::{MAIN_PORT, REDIRECTOR_PORT},
-    show_error, spawn_task,
+    interface::show_error,
+    servers::spawn_task,
 };
 use blaze_pk::{
     codec::Encodable,

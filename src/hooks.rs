@@ -1,3 +1,7 @@
+use crate::{
+    pattern::{fill_bytes, Pattern},
+    servers::servers_running_blocking,
+};
 use log::debug;
 use std::{
     alloc::{alloc, Layout},
@@ -6,11 +10,6 @@ use std::{
 use windows_sys::{
     core::PCSTR,
     Win32::Networking::WinSock::{gethostbyname, HOSTENT},
-};
-
-use crate::{
-    pattern::{fill_bytes, Pattern},
-    SERVERS_TASK,
 };
 
 const DLC_PATTERN: Pattern = Pattern {
@@ -86,7 +85,7 @@ pub unsafe extern "system" fn fake_gethostbyname(name: PCSTR) -> *mut HOSTENT {
     debug!("Got Host Lookup Request {}", str_name.to_string_lossy());
 
     // Don't redirect to local when custom server is not set
-    let is_official = SERVERS_TASK.blocking_read().is_none();
+    let is_official = !servers_running_blocking();
 
     // We are only targetting gosredirecotr for host redirects
     // forward null responses aswell

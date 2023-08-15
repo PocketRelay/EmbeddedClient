@@ -1,6 +1,6 @@
 use crate::{
     constants::{APP_VERSION, ICON_BYTES},
-    stop_servers, try_start_servers, SERVERS_TASK,
+    servers::{servers_running_blocking, stop_server_tasks, try_start_servers},
 };
 use log::{debug, error};
 use ngw::{GridLayoutItem, Icon};
@@ -87,10 +87,10 @@ pub fn init(runtime: tokio::runtime::Handle) {
 
             E::OnButtonClick => {
                 if handle == set_button {
-                    if SERVERS_TASK.blocking_read().is_some() {
+                    if servers_running_blocking() {
                         c_label.set_text("Disconnecting...");
 
-                        runtime.block_on(stop_servers());
+                        runtime.block_on(stop_server_tasks());
 
                         c_label.set_text("Not connected");
                         set_button.set_text("Connect")
@@ -133,4 +133,30 @@ pub fn init(runtime: tokio::runtime::Handle) {
 
     ngw::dispatch_thread_events();
     ngw::unbind_event_handler(&handler);
+}
+
+/// Shows a native info dialog with the provided title and text
+///
+/// `title` The title of the dialog
+/// `text`  The text of the dialog
+pub fn show_info(title: &str, text: &str) {
+    native_dialog::MessageDialog::new()
+        .set_title(title)
+        .set_text(text)
+        .set_type(native_dialog::MessageType::Info)
+        .show_alert()
+        .unwrap()
+}
+
+/// Shows a native error dialog with the provided title and text
+///
+/// `title` The title of the dialog
+/// `text`  The text of the dialog
+pub fn show_error(title: &str, text: &str) {
+    native_dialog::MessageDialog::new()
+        .set_title(title)
+        .set_text(text)
+        .set_type(native_dialog::MessageType::Error)
+        .show_alert()
+        .unwrap()
 }
