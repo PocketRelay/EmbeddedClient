@@ -39,11 +39,10 @@ pub async fn start_server(target: Arc<LookupData>) {
 
         spawn_task(async move {
             // Create the telemetry URL
-            let mut url = String::new();
-            url.push_str(&target.scheme);
-            url.push_str("://");
-            url.push_str(&target.host);
-            url.push_str(TELEMETRY_ENDPOINT);
+            let url = format!(
+                "{}://{}:{}{}",
+                target.scheme, target.host, target.port, TELEMETRY_ENDPOINT
+            );
 
             let client = Client::new();
 
