@@ -1,8 +1,9 @@
-use crate::{api::LookupData, constants::TELEMETRY_PORT, interface::show_error};
-use log::debug;
+use crate::{api::LookupData, constants::TELEMETRY_PORT};
+use log::{debug, error};
+use native_windows_gui::error_message;
 use reqwest::Client;
 use serde::Serialize;
-use std::{io, net::Ipv4Addr, process::exit, sync::Arc};
+use std::{io, net::Ipv4Addr, sync::Arc};
 use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
@@ -18,9 +19,9 @@ pub async fn start_server(target: Arc<LookupData>) {
     let listener = match TcpListener::bind((Ipv4Addr::UNSPECIFIED, TELEMETRY_PORT)).await {
         Ok(value) => value,
         Err(err) => {
-            let text = format!("Failed to start telemetry: {}", err);
-            show_error("Failed to start", &text);
-            exit(1);
+            error_message("Failed to start telemetry", &err.to_string());
+            error!("Failed to start telemetry: {}", err);
+            return;
         }
     };
 
@@ -28,7 +29,10 @@ pub async fn start_server(target: Arc<LookupData>) {
     loop {
         let stream: TcpStream = match listener.accept().await {
             Ok((stream, _)) => stream,
-            Err(_) => continue,
+            Err(err) => {
+                error!("Failed to accept telemetry connection: {}", err);
+                continue;
+            }
         };
 
         let target = target.clone();

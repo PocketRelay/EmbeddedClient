@@ -1,10 +1,11 @@
-use crate::{api::LookupData, constants::MAIN_PORT, interface::show_error, servers::spawn_task};
+use crate::{api::LookupData, constants::MAIN_PORT, servers::spawn_task};
 use log::{debug, error};
+use native_windows_gui::error_message;
 use reqwest::{
     header::{self, HeaderMap, HeaderValue},
     Client,
 };
-use std::{net::Ipv4Addr, process::exit, sync::Arc};
+use std::{net::Ipv4Addr, sync::Arc};
 use tokio::{
     io::copy_bidirectional,
     net::{TcpListener, TcpStream},
@@ -17,9 +18,9 @@ pub async fn start_server(target: Arc<LookupData>) {
     let listener = match TcpListener::bind((Ipv4Addr::UNSPECIFIED, MAIN_PORT)).await {
         Ok(value) => value,
         Err(err) => {
-            let text = format!("Failed to start main: {}", err);
-            show_error("Failed to start", &text);
-            exit(1);
+            error_message("Failed to start main", &err.to_string());
+            error!("Failed to start main: {}", err);
+            return;
         }
     };
 

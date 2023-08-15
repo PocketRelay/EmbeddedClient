@@ -1,6 +1,5 @@
 use crate::{
     constants::{MAIN_PORT, REDIRECTOR_PORT},
-    interface::show_error,
     servers::spawn_task,
 };
 use blaze_pk::{
@@ -12,7 +11,8 @@ use blaze_pk::{
 use blaze_ssl_async::{BlazeAccept, BlazeListener};
 use futures_util::{SinkExt, StreamExt};
 use log::{debug, error};
-use std::{io, net::Ipv4Addr, process::exit, time::Duration};
+use native_windows_gui::error_message;
+use std::{io, net::Ipv4Addr, time::Duration};
 use tokio::{select, time::sleep};
 use tokio_util::codec::Framed;
 
@@ -23,10 +23,9 @@ pub async fn start_server() {
     let listener = match BlazeListener::bind((Ipv4Addr::UNSPECIFIED, REDIRECTOR_PORT)).await {
         Ok(value) => value,
         Err(err) => {
-            // Handle failure to bind the server
-            let text = format!("Failed to start redirector: {}", err);
-            show_error("Failed to start", &text);
-            exit(1);
+            error_message("Failed to start redirector", &err.to_string());
+            error!("Failed to start redirector: {}", err);
+            return;
         }
     };
 

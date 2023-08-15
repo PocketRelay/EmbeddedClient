@@ -27,8 +27,6 @@ serde = { version = "1", features = ["derive"] }
 blaze-pk = "1"
 # Blaze SSLv3 async TCPStream implementation
 blaze-ssl-async = "^0.3"
-# Native file picker dialog
-native-dialog = "0.6.3"
 # Library for obtaining the local IP address of the device
 local-ip-address = { version = "0.5.2", git = "https://github.com/jacobtread/local-ip-address.git" }
 
@@ -44,14 +42,13 @@ features = [
     "Win32_System_Memory",
     "Win32_System_LibraryLoader",
     "Win32_System_Console",
-    "Win32_Networking_WinSock"
+    "Win32_Networking_WinSock",
 ]
 
 # Tokio async runtime
 [dependencies.tokio]
 version = "1"
 features = ["macros", "net", "parking_lot", "rt-multi-thread", "sync", "signal"]
-
 
 
 [dependencies.native-windows-gui]
